@@ -1,0 +1,84 @@
+""" 
+Created by Reu
+Supported flags:
+	-u: specifies url or ip to be attacked
+	-w: specifies wordlist to iterate through
+	-vvv: specifies verbose mode (optional)
+	-h: to get to help page
+	-e: adds extention to end of url i.e. .php, .html etc.
+"""
+#imports
+import sys
+import requests as req
+import re
+#global variables
+target = ""
+dirlist = ""
+verbose_mode = False
+extention = ""
+arguements = ["-u", "-w", "-e", "-vvv", "-h"]
+#function handling arguements
+def first_sysarg():
+	global target
+	global dirlist
+	global extention
+	#checks what the  arguement is, then edits variables accordingly
+	if arguements[0] in sys.argv:
+		pos = (sys.argv.index("-u")) + 1
+		target = sys.argv[pos]
+		if re.match(R"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", target):
+			#idk i thought this was cool
+			target = "http://" + target
+			print("No protocol specified, adding http:// before the target IP")
+		elif target.startswith("www."):
+			target = "http://" + target
+			print("No protocol specified, adding http:// before the target domain name")
+		elif not target.startswith("http://www."):
+			target = "http://www." + target
+			print("No protocol specified, adding http://www. before the target domain name")
+	if arguements[1] in sys.argv:
+		pos = (sys.argv.index("-w")) + 1
+		with open(sys.argv[pos], "r", encoding="ISO-8859-1") as text:
+			dirlist = text.read()
+	if arguements[4] in sys.argv:
+		print("pybuster is a directory brute forcing tool developed by Reu.\nSupported arguements are:\n-u {url or ip of target}\n-w {wordlist}\n-e {add an extention to the end of the directorynames provided}\n-vvv {outputs what directorys have been tried and their resulting status codes}\n-h {to get back to this page}")
+		exit()
+	if arguements[2] in sys.argv:
+		pos = (sys.argv.index("-e")) + 1
+		extention = sys.argv[pos]
+	if arguements[3] in sys.argv:
+		pass
+
+def is_verbose():
+	#checks to see if the -vvv arguement is given
+	global verbose_mode
+	if "-vvv" in sys.argv:
+		verbose_mode = True
+
+#fuction calls
+first_sysarg()
+is_verbose()
+#**makes it pretty if there is a keyboard interrupt
+try:
+	#adds the number of directories to UI
+	count = 0
+	for word in dirlist.split():
+		count += 1
+	#stuff to make output pretty
+	print(str(count) + " possible directorys supplied, checking them now")
+	print("****************************************")
+	#spliting words in the list into individual words
+	for word in dirlist.split():
+		#appending the directory name to the end of the target url
+		try_this = target + "/" + word
+		if len(extention) > 1:
+			try_this = try_this + extention
+		resp = req.get(try_this)
+		#checking if verbose mode is on
+		if verbose_mode:
+			print("Tried " + try_this + " and it resulted with a status code of " + str(resp.status_code))
+		#checking if the status code is 200(ok) and if it is then printing what caused it
+		if resp.status_code == 200:
+			print("******Match found!******\n" + try_this)
+except KeyboardInterrupt:
+	print("Keybaord interrupt detected, closing...")
